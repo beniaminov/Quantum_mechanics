@@ -233,13 +233,27 @@ function layout(title, content) {
     .formula-dialog .formula-actions { display: flex; flex-wrap: wrap; gap: 8px; }
     .formula-dialog .formula-actions button { margin: 0; }
     .formula-dialog .formula-error { min-height: 1.5em; color: #922; }
+    .project-story { padding: 0; overflow: hidden; border: 0; }
+    .project-story > h1 { margin: 0; padding: 36px 36px 14px; color: #fff; background: linear-gradient(125deg, #101832, #174675 58%, #087f83); }
+    .project-story > div:first-of-type { margin: 0; padding: 0 36px 36px; color: #e4f4ff; background: linear-gradient(125deg, #101832, #174675 58%, #087f83); }
+    .project-story > div:first-of-type > p:first-child { margin: 0 0 14px; color: #83ead4; font-size: .78rem; font-weight: 750; letter-spacing: .12em; }
+    .project-story > div:first-of-type > h2 { margin: 0 0 12px; border: 0; color: #fff; font-size: clamp(1.6rem, 4vw, 2.25rem); }
+    .project-story > div:first-of-type > p:last-child { max-width: 72ch; margin: 0; color: #e4f4ff; font-size: 1.1rem; }
+    .project-story > h2 { margin: 34px 32px 14px; padding-bottom: 10px; border-bottom: 2px solid #e3ebf4; color: #17375a; font-size: 1.4rem; }
+    .project-story > p, .project-story > ul, .project-story > ol { margin-right: 32px; margin-left: 32px; }
+    .project-story li { margin: 10px 0; line-height: 1.7; }
+    .project-story > blockquote { margin: 20px 32px; padding: 18px 22px; border-left: 5px solid #0c9990; border-radius: 0 12px 12px 0; background: linear-gradient(110deg, #eafaf6, #f0f5ff); color: #1c3854; font-size: 1.06rem; line-height: 1.7; }
+    .project-story > div:not(:first-of-type) { display: grid; grid-template-columns: repeat(auto-fit, minmax(205px, 1fr)); gap: 14px; margin: 18px 32px; }
+    .project-story > div:not(:first-of-type) > div { padding: 18px; border: 1px solid #dae5f0; border-radius: 14px; background: linear-gradient(150deg, #fff, #f4f8fd); box-shadow: 0 8px 20px #15243a0c; }
+    .project-story > div:not(:first-of-type) h3 { margin: 0 0 10px; color: #087f83; font-size: 1.08rem; }
+    .project-story > div:not(:first-of-type) p { margin: 0; color: #4b5c70; }
     button, .button { display: inline-block; margin-top: 18px; padding: 11px 16px; border: 0; border-radius: 6px; background: #1556a0; color: white; font: inherit; font-weight: 650; cursor: pointer; text-decoration: none; }
     button:hover, .button:hover { background: #10447f; }
     .actions { display: flex; flex-wrap: wrap; align-items: center; gap: 12px; }
     .actions button { margin-right: 8px; }
     .error { padding: 12px; border-radius: 6px; background: #fff0f0; color: #922; }
     footer { padding: 20px 16px; color: #59677a; text-align: center; }
-    @media (max-width: 560px) { .bar { align-items: flex-start; flex-direction: column; padding: 16px 0; gap: 12px; } main { padding-top: 28px; } .card { padding: 20px; } }
+    @media (max-width: 560px) { .bar { align-items: flex-start; flex-direction: column; padding: 16px 0; gap: 12px; } main { padding-top: 28px; } .card { padding: 20px; } .project-story { padding: 0; } .project-story > h1 { padding: 26px 22px 12px; } .project-story > div:first-of-type { padding: 0 22px 26px; } .project-story > h2 { margin-right: 22px; margin-left: 22px; } .project-story > p, .project-story > ul, .project-story > ol { margin-right: 22px; margin-left: 22px; } .project-story > blockquote { margin-right: 22px; margin-left: 22px; } .project-story > div:not(:first-of-type) { margin-right: 22px; margin-left: 22px; } }
   </style>
 </head>
 <body>${content}</body>
@@ -870,8 +884,9 @@ function createServer({
         <p><strong>Дата:</strong> <time datetime="${currentDateTime.toISOString()}">${escapeHtml(currentDateTime.toLocaleDateString('ru-RU'))}</time></p>
         <p><strong>Время:</strong> <time datetime="${currentDateTime.toISOString()}">${escapeHtml(currentDateTime.toLocaleTimeString('ru-RU'))}</time></p>
       </section>` : '';
+    const articleClass = slug === 'unification' || slug === 'phase-space' ? 'card project-story' : 'card';
     sendHtml(req, res, 200, layout(page.title, `
-      ${header(pages)}<main><article class="card"><h1>${escapeHtml(page.title)}</h1>${dateTimeDisplay}${paragraphs}${pageAssets}</article></main>
+      ${header(pages)}<main><article class="${articleClass}"><h1>${escapeHtml(page.title)}</h1>${dateTimeDisplay}${paragraphs}${pageAssets}</article></main>
       <footer>Сайт Е.М. Бениаминова</footer><script src="/mathjax-config.js"></script><script src="/mathjax/tex-mml-chtml.js" defer></script>`));
   }
 

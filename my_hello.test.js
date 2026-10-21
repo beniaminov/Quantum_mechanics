@@ -335,3 +335,42 @@ test('rejects reserved and duplicate page addresses and files with unsupported c
   });
   assert.equal(unsupported.status, 400);
 });
+
+test('publishes the project overview, phase-space page, and source PDF', async () => {
+  const siteServer = createServer({
+    adminUsername: 'admin',
+    adminPassword: 'test-password-long-enough',
+    dataFile: path.join(__dirname, 'data', 'pages.json'),
+    uploadDir: path.join(__dirname, 'data', 'uploads'),
+  });
+  await new Promise((resolve, reject) => {
+    siteServer.once('error', reject);
+    siteServer.listen(0, '127.0.0.1', resolve);
+  });
+  const siteUrl = `http://127.0.0.1:${siteServer.address().port}`;
+
+  try {
+    const overview = await fetch(`${siteUrl}/unification`);
+    assert.equal(overview.status, 200);
+    const overviewHtml = await overview.text();
+    assert.match(overviewHtml, /class="card project-story"/);
+    assert.match(overviewHtml, /Промежуточная область/);
+    assert.match(overviewHtml, /авторской исследовательской программы/);
+    assert.match(overviewHtml, /href="\/phase-space"/);
+
+    const details = await fetch(`${siteUrl}/phase-space`);
+    assert.equal(details.status, 200);
+    const detailsHtml = await details.text();
+    assert.match(detailsHtml, /href="\/uploads\/6866edd42d006f85cecde44692437335\.pdf"/);
+    assert.match(detailsHtml, /Быстрый этап/);
+    assert.match(detailsHtml, /декогеренцией/);
+
+    const sourcePdf = await fetch(`${siteUrl}/uploads/6866edd42d006f85cecde44692437335.pdf`);
+    assert.equal(sourcePdf.status, 200);
+    assert.equal(sourcePdf.headers.get('content-type'), 'application/pdf');
+  } finally {
+    await new Promise((resolve, reject) => {
+      siteServer.close((error) => (error ? reject(error) : resolve()));
+    });
+  }
+});
