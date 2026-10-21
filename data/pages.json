@@ -1,0 +1,45 @@
+{
+  "home": {
+    "title": "О КВАНТОВОЙ МЕХАНИКЕ",
+    "content": "<p><a href=\"/about\">Добро пожаловать на наш сайт!</a></p><p>На этом сайте вам будет представлен новый естественный взгляд на квантовую механику.</p><p><a href=\"/uploads/6f19020671941751dcaf53a824b77a38.jpg\"><img src=\"/uploads/6f19020671941751dcaf53a824b77a38.jpg\" alt=\"chastitcha.jpg\" style=\"width: 610px; max-width: 100%; height: auto\"></a></p><p></p><p><a href=\"/about\">Это главная стран</a>ица. Страницы может изменять только администратор после входа в йдите в админ-панель.</p>",
+    "assets": [
+      {
+        "id": "6f19020671941751dcaf53a824b77a38.jpg",
+        "name": "chastitcha.jpg",
+        "type": "image/jpeg"
+      }
+    ]
+  },
+  "about": {
+    "title": "О нас",
+    "content": "<p></p><p></p><p></p><p>На этом сайте представлены результаты многолетних исследований по основаниям квантовой механики и поиску направлений новых теорий, которые могли бы более полно связать классическую и квантовую механику, объяснить процессы редукции волновой функции при измерениях и указать направления по объединению кантовой механики и теории относительности. Некоторые результаты этой деятельности отражены в книге:</p><p>&nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp;&nbsp;<a href=\"/uploads/8a3c78b3accca09f7089fe415bcbdd67.jpg\"><img src=\"/uploads/8a3c78b3accca09f7089fe415bcbdd67.jpg\" alt=\"Book.jpg\" style=\"width: 30%; max-width: 100%; height: auto\"></a></p><p></p><p></p>",
+    "assets": [
+      {
+        "id": "8a3c78b3accca09f7089fe415bcbdd67.jpg",
+        "name": "Book.jpg",
+        "type": "image/jpeg"
+      }
+    ]
+  },
+  "contacts": {
+    "title": "Контакты",
+    "content": "<p>Свои мнения и предложения о сотрудничестве сообщайте по адресу: ebeniamin@yandex.ru</p>",
+    "assets": []
+  },
+  "nn2": {
+    "title": "Страница проверки функций",
+    "content": "<h2>Перечислим функции:</h2><div><ul><li>Список</li><li>Ссылка <a href=\"/about\">на страницу</a> сайта</li><li><a href=\"/uploads/81eb45eb726eadcd849796e52de231ce.jpg\"><img src=\"/uploads/81eb45eb726eadcd849796e52de231ce.jpg\" alt=\"anion.jpg\" style=\"width: 76%; max-width: 100%; height: auto\"></a></li><li><u>Это картинка.</u></li><li><u>Это формула&nbsp; \\(\\frac{\\pi a^2}{\\hbar}\\)</u></li></ul>Это текст с формулами:</div><div>&nbsp;\\[ \\frac{a}{b} - \\int_a^b f(x) dx \\ \\ \\ \\ \\ \\ \\ \\&nbsp;(1)\\]</div><div>\\begin{equation}a_0+\\frac{1}{a_1+1}\\ \\ \\ \\ \\ \\ \\ \\ \\ \\ \\ \\ (2)\\end{equation}</div><div><u><br></u></div><div><a href=\"/uploads/dc706ef488a2161048b6c9a50290c532.pdf\">7.pdf</a>&nbsp;&nbsp;<u></u></div><div></div>",
+    "assets": [
+      {
+        "id": "81eb45eb726eadcd849796e52de231ce.jpg",
+        "name": "anion.jpg",
+        "type": "image/jpeg"
+      },
+      {
+        "id": "dc706ef488a2161048b6c9a50290c532.pdf",
+        "name": "7.pdf",
+        "type": "application/pdf"
+      }
+    ]
+  }
+}
