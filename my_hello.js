@@ -910,7 +910,16 @@ function createServer({
         try {
           await savePages((currentPages) => {
             if (!currentPages[slug]) throw new HttpError(404, 'Страница не найдена.');
-            currentPages[slug] = { title, content, assets: [...retainedAssets, ...newAssets] };
+            const currentOrder = orderedPageEntries(currentPages);
+            currentOrder.forEach(([currentSlug, currentPage], order) => {
+              if (!Number.isSafeInteger(currentPage.order)) currentPage.order = order;
+            });
+            currentPages[slug] = {
+              title,
+              content,
+              assets: [...retainedAssets, ...newAssets],
+              order: currentPages[slug].order,
+            };
           });
         } catch (error) {
           await removeAssets(newAssets);

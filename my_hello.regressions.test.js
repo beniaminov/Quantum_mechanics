@@ -261,9 +261,22 @@ test('admin page order can be changed securely and is reflected on the site', as
   assert.equal(reorder.status, 303, await reorder.text());
   assert.equal(reorder.headers.get('location'), '/admin');
 
+  const editForm = new FormData();
+  editForm.set('csrf', await editorCsrf('home'));
+  editForm.set('title', 'Главная после редактирования');
+  editForm.set('content', 'Изменённое содержимое главной страницы');
+  const editResponse = await fetch(`${baseUrl}/admin/pages/home`, {
+    method: 'POST',
+    headers: { Cookie: cookie },
+    body: editForm,
+    redirect: 'manual',
+  });
+  assert.equal(editResponse.status, 303);
+
   const savedPages = JSON.parse(await fs.readFile(dataFile, 'utf8'));
   assert.ok(savedPages.about.order < savedPages.home.order);
   assert.ok(savedPages.home.order < savedPages['1'].order);
+  assert.equal(savedPages.home.title, 'Главная после редактирования');
   const publicPage = await (await fetch(`${baseUrl}/`)).text();
   const navigation = publicPage.match(/<nav>([\s\S]*?)<\/nav>/)[1];
   assert.ok(navigation.indexOf('href="/about"') < navigation.indexOf('href="/"'));
