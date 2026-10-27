@@ -16,6 +16,7 @@ const MAX_UPLOADS_PER_PAGE = 4;
 const MAX_MULTIPART_BYTES = MAX_UPLOAD_BYTES * MAX_UPLOADS_PER_PAGE + MAX_FIELD_BYTES + 64 * 1024;
 const DEFAULT_DATA_FILE = path.join(__dirname, 'data', 'pages.json');
 const EDITOR_SCRIPT_PATH = path.join(__dirname, 'public', 'admin-editor.js');
+const ADMIN_PAGES_SCRIPT_PATH = path.join(__dirname, 'public', 'admin-pages.js');
 const MATHJAX_CONFIG_PATH = path.join(__dirname, 'public', 'mathjax-config.js');
 const MATHJAX_DIR = path.join(__dirname, 'node_modules', 'mathjax-full', 'es5');
 const RESERVED_SLUGS = new Set(['admin', 'health', 'uploads', 'home']);
@@ -206,6 +207,13 @@ function layout(title, content) {
     .pages { display: grid; gap: 12px; padding: 0; list-style: none; }
     .pages a { display: block; padding: 16px; border: 1px solid #dce3ed; border-radius: 8px; color: #1556a0; text-decoration: none; }
     .pages a:hover { background: #f5f8fc; }
+    .page-item { border: 1px solid #dce3ed; border-radius: 8px; background: #fff; }
+    .page-item.is-dragging { opacity: .45; }
+    .page-row { display: flex; align-items: center; gap: 12px; padding: 8px; }
+    .page-row > a { flex: 1; padding: 8px; border: 0; }
+    .drag-handle { padding: 8px; color: #59677a; cursor: grab; user-select: none; }
+    .page-move { display: flex; gap: 6px; }
+    .page-move button { margin: 0; padding: 8px 10px; }
     .asset-list { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 16px; padding: 0; list-style: none; }
     .asset-list li { padding: 12px; border: 1px solid #dce3ed; border-radius: 8px; overflow-wrap: anywhere; }
     .asset-list img { display: block; width: 100%; max-height: 180px; object-fit: contain; margin-bottom: 8px; }
@@ -262,10 +270,17 @@ function layout(title, content) {
 }
 
 function header(pages, admin = false) {
-  const links = Object.entries(pages).map(([slug, page]) =>
+  const links = orderedPageEntries(pages).map(([slug, page]) =>
     `<a href="/${slug === 'home' ? '' : escapeHtml(slug)}">${escapeHtml(page.title)}</a>`).join('');
   const adminLink = admin ? '' : '<a href="/admin">Администрирование</a>';
   return `<header><div class="bar"><a class="brand" href="/"> Квантовая механика</a><nav>${links}${adminLink}</nav></div></header>`;
+}
+
+function orderedPageEntries(pages) {
+  return Object.entries(pages)
+    .map((entry, index) => ({ entry, index, order: Number.isInteger(entry[1].order) ? entry[1].order : index }))
+    .sort((left, right) => left.order - right.order || left.index - right.index)
+    .map(({ entry }) => entry);
 }
 
 async function readPages(dataFile) {
@@ -276,6 +291,7 @@ async function readPages(dataFile) {
   }
   for (const [slug, page] of Object.entries(pages)) {
     if (!/^[a-z0-9-]+$/.test(slug) || !page || typeof page.title !== 'string' || typeof page.content !== 'string'
+      || (page.order !== undefined && (!Number.isSafeInteger(page.order) || page.order < 0))
       || (page.assets !== undefined && (!Array.isArray(page.assets) || page.assets.some((asset) =>
         !asset || !/^[a-f0-9]{32}\.(png|jpg|gif|webp|pdf)$/.test(asset.id)
         || typeof asset.name !== 'string' || !Object.values(ASSET_TYPES).includes(asset.type))))) {
@@ -444,6 +460,7 @@ function getFormValue(form, name) {
 }
 
 function getFormValues(form, name) {
+  if (typeof form.getAll === 'function') return form.getAll(name);
   const value = form.get(name);
   return value === undefined ? [] : Array.isArray(value) ? value : [value];
 }
@@ -592,6 +609,18 @@ function createServer({
       return;
     }
 
+    if (pathname === '/admin-pages.js' && (req.method === 'GET' || req.method === 'HEAD')) {
+      const script = await fs.readFile(ADMIN_PAGES_SCRIPT_PATH);
+      res.writeHead(200, {
+        'Content-Type': 'text/javascript; charset=utf-8',
+        'Content-Length': script.length,
+        'X-Content-Type-Options': 'nosniff',
+        'Content-Security-Policy': "default-src 'none'",
+      });
+      res.end(req.method === 'HEAD' ? undefined : script);
+      return;
+    }
+
     const uploadMatch = pathname.match(/^\/uploads\/([a-f0-9]{32}\.(?:png|jpg|gif|webp|pdf))$/);
     if (uploadMatch && (req.method === 'GET' || req.method === 'HEAD')) {
       const [, id] = uploadMatch;
@@ -664,12 +693,26 @@ function createServer({
 
       const pages = await readPages(dataFile);
       if ((pathname === '/admin' || pathname === '/admin/') && (req.method === 'GET' || req.method === 'HEAD')) {
-        const items = Object.entries(pages).map(([slug, page]) =>
-          `<li><a href="/admin/pages/${escapeHtml(slug)}">Редактировать: ${escapeHtml(page.title)}</a>${slug === 'home' ? ' <span class="muted">(главную удалить нельзя)</span>' : ''}</li>`).join('');
+        const items = orderedPageEntries(pages).map(([slug, page], index, entries) => `
+          <li class="page-item" data-page-item draggable="true">
+            <div class="page-row">
+              <span class="drag-handle" aria-hidden="true">⠿</span>
+              <a href="/admin/pages/${escapeHtml(slug)}">Редактировать: ${escapeHtml(page.title)}${slug === 'home' ? ' (главную удалить нельзя)' : ''}</a>
+              <div class="page-move">
+                <button type="button" class="move-page-up" aria-label="Переместить страницу «${escapeHtml(page.title)}» вверх"${index === 0 ? ' disabled' : ''}>↑</button>
+                <button type="button" class="move-page-down" aria-label="Переместить страницу «${escapeHtml(page.title)}» вниз"${index === entries.length - 1 ? ' disabled' : ''}>↓</button>
+              </div>
+              <input type="hidden" name="order" value="${escapeHtml(slug)}">
+            </div>
+          </li>`).join('');
         sendHtml(req, res, 200, layout('Управление сайтом', `
           ${header(pages, true)}<main><section class="card">
-            <h1>Управление страницами</h1><p class="muted">Выберите страницу, чтобы изменить её заголовок и текст.</p>
-            <ul class="pages">${items}</ul>
+            <h1>Управление страницами</h1><p class="muted">Перетащите страницы, чтобы изменить их порядок. На сенсорном экране или с клавиатуры используйте кнопки со стрелками.</p>
+            <form id="page-order-form" method="post" action="/admin/pages/reorder">
+              <input type="hidden" name="csrf" value="${session.csrfToken}">
+              <ul class="pages" id="page-list">${items}</ul>
+              <button type="submit">Сохранить порядок страниц</button>
+            </form>
             <h2>Добавить страницу</h2>
             <form method="post" action="/admin/pages">
               <input type="hidden" name="csrf" value="${session.csrfToken}">
@@ -679,7 +722,26 @@ function createServer({
               <button type="submit">Создать страницу</button>
             </form>
             <form method="post" action="/admin/logout"><input type="hidden" name="csrf" value="${session.csrfToken}"><button type="submit">Выйти</button></form>
-          </section></main>`), { 'Cache-Control': 'no-store' });
+          </section></main><script src="/admin-pages.js" defer></script>`), { 'Cache-Control': 'no-store' });
+        return;
+      }
+
+      if (pathname === '/admin/pages/reorder' && req.method === 'POST') {
+        const form = await readForm(req);
+        validateCsrf(form, session);
+        const requestedOrder = getFormValues(form, 'order');
+        await savePages((currentPages) => {
+          const currentSlugs = Object.keys(currentPages);
+          if (requestedOrder.length !== currentSlugs.length
+            || new Set(requestedOrder).size !== requestedOrder.length
+            || requestedOrder.some((slug) => !Object.hasOwn(currentPages, slug))) {
+            throw new HttpError(400, 'Не удалось сохранить порядок: список страниц изменился. Обновите страницу и попробуйте снова.');
+          }
+          requestedOrder.forEach((slug, order) => {
+            currentPages[slug].order = order;
+          });
+        });
+        sendRedirect(res, '/admin', { 'Cache-Control': 'no-store' });
         return;
       }
 
@@ -697,7 +759,11 @@ function createServer({
         }
         await savePages((currentPages) => {
           if (currentPages[slug]) throw new HttpError(409, 'Страница с таким адресом уже существует.');
-          currentPages[slug] = { title, content, assets: [] };
+          const currentEntries = orderedPageEntries(currentPages);
+          currentEntries.forEach(([currentSlug, page], order) => {
+            if (!Number.isSafeInteger(page.order)) currentPages[currentSlug].order = order;
+          });
+          currentPages[slug] = { title, content, assets: [], order: currentEntries.length };
         });
         sendRedirect(res, `/admin/pages/${slug}`, { 'Cache-Control': 'no-store' });
         return;
@@ -724,7 +790,7 @@ function createServer({
           return;
         }
         const assets = page.assets || [];
-        const pageLinks = Object.entries(pages)
+        const pageLinks = orderedPageEntries(pages)
           .filter(([targetSlug]) => targetSlug !== slug)
           .map(([targetSlug, targetPage]) => `<option value="/${targetSlug === 'home' ? '' : escapeHtml(targetSlug)}">${escapeHtml(targetPage.title)}</option>`)
           .join('');

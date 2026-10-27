@@ -209,3 +209,67 @@ test('editing through the editor keeps div content intact after a save round-tri
   const textarea = editorHtml.match(/<textarea id="content"[^>]*>([\s\S]*?)<\/textarea>/)[1];
   assert.match(textarea, /&lt;div&gt;Блок текста&lt;\/div&gt;/);
 });
+
+test('admin page order can be changed securely and is reflected on the site', async () => {
+  const dashboard = await fetch(`${baseUrl}/admin`, { headers: { Cookie: cookie } });
+  const dashboardHtml = await dashboard.text();
+  assert.match(dashboardHtml, /id="page-order-form"/);
+  assert.match(dashboardHtml, /draggable="true"/);
+  assert.match(dashboardHtml, /Переместить страницу/);
+  assert.match(dashboardHtml, /src="\/admin-pages\.js"/);
+  const csrf = await csrfFrom(dashboardHtml);
+  const orderForm = (token, slugs) => {
+    const form = new URLSearchParams({ csrf: token });
+    slugs.forEach((slug) => form.append('order', slug));
+    return form;
+  };
+
+  const invalidOrder = await fetch(`${baseUrl}/admin/pages/reorder`, {
+    method: 'POST',
+    headers: { Cookie: cookie, 'Content-Type': 'application/x-www-form-urlencoded' },
+    body: new URLSearchParams({ csrf, order: 'about' }),
+    redirect: 'manual',
+  });
+  assert.equal(invalidOrder.status, 400, 'сервер должен отклонять неполный порядок');
+
+  const invalidCsrf = await fetch(`${baseUrl}/admin/pages/reorder`, {
+    method: 'POST',
+    headers: { Cookie: cookie, 'Content-Type': 'application/x-www-form-urlencoded' },
+    body: orderForm('invalid', ['about', 'home']),
+    redirect: 'manual',
+  });
+  assert.equal(invalidCsrf.status, 403, 'изменение порядка должно защищаться CSRF-токеном');
+
+  const createNumericSlug = await fetch(`${baseUrl}/admin/pages`, {
+    method: 'POST',
+    headers: { Cookie: cookie, 'Content-Type': 'application/x-www-form-urlencoded' },
+    body: new URLSearchParams({ csrf, title: 'Страница 1', slug: '1', content: 'Числовой адрес' }),
+    redirect: 'manual',
+  });
+  assert.equal(createNumericSlug.status, 303);
+  const updatedDashboard = await (await fetch(`${baseUrl}/admin`, { headers: { Cookie: cookie } })).text();
+  assert.deepEqual([...updatedDashboard.matchAll(/name="order" value="([^"]+)"/g)].map((match) => match[1]), [
+    'home', 'about', '1',
+  ], 'новая страница должна добавляться в конец даже при числовом адресе');
+
+  const reorder = await fetch(`${baseUrl}/admin/pages/reorder`, {
+    method: 'POST',
+    headers: { Cookie: cookie, 'Content-Type': 'application/x-www-form-urlencoded' },
+    body: orderForm(csrf, ['about', 'home', '1']),
+    redirect: 'manual',
+  });
+  assert.equal(reorder.status, 303, await reorder.text());
+  assert.equal(reorder.headers.get('location'), '/admin');
+
+  const savedPages = JSON.parse(await fs.readFile(dataFile, 'utf8'));
+  assert.ok(savedPages.about.order < savedPages.home.order);
+  assert.ok(savedPages.home.order < savedPages['1'].order);
+  const publicPage = await (await fetch(`${baseUrl}/`)).text();
+  const navigation = publicPage.match(/<nav>([\s\S]*?)<\/nav>/)[1];
+  assert.ok(navigation.indexOf('href="/about"') < navigation.indexOf('href="/"'));
+  assert.ok(navigation.indexOf('href="/"') < navigation.indexOf('href="/1"'));
+
+  const scriptResponse = await fetch(`${baseUrl}/admin-pages.js`);
+  assert.equal(scriptResponse.status, 200);
+  assert.match(await scriptResponse.text(), /dragover/);
+});
