@@ -2,6 +2,7 @@ const crypto = require('node:crypto');
 const fs = require('node:fs/promises');
 const http = require('node:http');
 const path = require('node:path');
+require('dotenv').config({ path: path.join(__dirname, '.env') });
 
 const SESSION_COOKIE = 'hello_service_session';
 const SESSION_TTL_MS = 8 * 60 * 60 * 1000;
